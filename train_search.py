@@ -17,11 +17,10 @@ import utils
 from model_search import Network
 from architect import Architect
 
-
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=128, help='batch size')                     # もともとは64
-parser.add_argument('--learning_rate', type=float, default=0.05, help='init learning rate')       # もともとは0.025
+parser.add_argument('--batch_size', type=int, default=128, help='batch size')  # もともとは64
+parser.add_argument('--learning_rate', type=float, default=0.05, help='init learning rate')  # もともとは0.025
 parser.add_argument('--learning_rate_min', type=float, default=0.001, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
@@ -119,7 +118,8 @@ def main():
         print(torch.sigmoid(model.alphas_reduce))
 
         # training
-        train_acc, train_obj, train_obj_arch = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
+        train_acc, train_obj, train_obj_arch = train(train_queue, valid_queue, model, architect, criterion, optimizer,
+                                                     lr)
         logging.info('train_acc %f', train_acc)
         writer.add_scalar('search/accuracy/train', train_acc, epoch)
         writer.add_scalar('search/loss/train', train_obj, epoch)
@@ -150,12 +150,10 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         }
     """
 
-    objs = utils.AvgrageMeter()       # network重み学習のloss
+    objs = utils.AvgrageMeter()  # network重み学習のloss
     objs_arch = utils.AvgrageMeter()  # architecture重み学習のloss
-    top1 = utils.AvgrageMeter()       # accuracy (top1)
-    top5 = utils.AvgrageMeter()       # accuracy (top5)
-    valid_queue_iter = iter(valid_queue)
-
+    top1 = utils.AvgrageMeter()  # accuracy (top1)
+    top5 = utils.AvgrageMeter()  # accuracy (top5)
     model.train()
 
     for step, (input, target) in enumerate(train_queue):
@@ -165,7 +163,12 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         target = target.cuda(non_blocking=True)
 
         # 1バッチ分のデータ取得（アーキテクチャ探索に用いる用）
-        input_search, target_search = next(valid_queue_iter)
+        try:
+            input_search, target_search = next(valid_queue_iter)
+        except:
+            valid_queue_iter = iter(valid_queue)
+            input_search, target_search = next(valid_queue_iter)
+
         input_search = input_search.cuda()
         target_search = target_search.cuda(non_blocking=True)
 
