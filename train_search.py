@@ -118,12 +118,11 @@ def main():
         print(torch.sigmoid(model.alphas_reduce))
 
         # training
-        train_acc, train_obj, train_obj_arch = train(train_queue, valid_queue, model, architect, criterion, optimizer,
-                                                     lr)
+        train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
         logging.info('train_acc %f', train_acc)
         writer.add_scalar('search/accuracy/train', train_acc, epoch)
         writer.add_scalar('search/loss/train', train_obj, epoch)
-        writer.add_scalar('search/loss/arch', train_obj_arch, epoch)
+        # writer.add_scalar('search/loss/arch', train_obj_arch, epoch)
 
         # validation
         valid_acc, valid_obj = infer(valid_queue, model, criterion)
@@ -151,9 +150,9 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
     """
 
     objs = utils.AvgrageMeter()  # network重み学習のloss
-    objs_arch = utils.AvgrageMeter()  # architecture重み学習のloss
+    # objs_arch = utils.AvgrageMeter()  # architecture重み学習のloss
     top1 = utils.AvgrageMeter()  # accuracy (top1)
-    top5 = utils.AvgrageMeter()  # accuracy (top5)
+    # top5 = utils.AvgrageMeter()  # accuracy (top5)
     model.train()
 
     for step, (input, target) in enumerate(train_queue):
@@ -173,7 +172,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         target_search = target_search.cuda(non_blocking=True)
 
         # アーキテクチャ(α)探索　（∂Lval(ω - lr * [∂Ltrain(ω,α) / ∂ω],α) / ∂α）
-        loss_arch = architect.step(input, target, input_search, target_search, lr, optimizer, unrolled=args.unrolled)
+        architect.step(input, target, input_search, target_search, lr, optimizer, unrolled=args.unrolled)
 
         # 重み(ω)学習
         optimizer.zero_grad()
@@ -186,14 +185,14 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         # loss, accuracy出力
         prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
         objs.update(loss.item(), n)
-        objs_arch.update(loss_arch, n)
+        # objs_arch.update(loss_arch.item(), n)
         top1.update(prec1.item(), n)
-        top5.update(prec5.item(), n)
+        # top5.update(prec5.item(), n)
 
         if step % args.report_freq == 0:
-            logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+            logging.info('train %03d %e %f', step, objs.avg, top1.avg)
 
-    return top1.avg, objs.avg, objs_arch.avg
+    return top1.avg, objs.avg
 
 
 def infer(valid_queue, model, criterion):
