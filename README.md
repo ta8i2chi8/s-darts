@@ -23,8 +23,9 @@ python visualize.py DARTS {SEED値}
 ```
 ## Create GIF from log.txt
 ```
-python visualize_gif.py {FILE_NAME_DATE}
-  例：python visualize_gif.py 20211112-113450
+python visualize_gif.py {SAVED_DIR_NAME} {FILE_NAME_DATE}
+  例1：python visualize_gif.py EXP 20211112-113450
+  例2：python visualize_gif.py cifar100 20211112-113450
 ```
 
 

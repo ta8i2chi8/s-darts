@@ -40,6 +40,7 @@ parser.add_argument('--train_portion', type=float, default=0.5, help='portion of
 parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
 parser.add_argument('--arch_learning_rate', type=float, default=3e-4, help='learning rate for arch encoding')
 parser.add_argument('--arch_weight_decay', type=float, default=1e-3, help='weight decay for arch encoding')
+parser.add_argument('--cifar100', action='store_true', default=False, help='search with cifar100 dataset')
 args = parser.parse_args()
 
 
@@ -49,15 +50,17 @@ def main():
     utils.create_exp_dir(args.save)
 
     log_format = '%(asctime)s %(message)s'
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-                        format=log_format, datefmt='%m/%d %H:%M:%S')
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=log_format, datefmt='%m/%d %H:%M:%S')
     fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
     fh.setFormatter(logging.Formatter(log_format))
     logging.getLogger().addHandler(fh)
 
     writer = SummaryWriter(log_dir="./runs/{}".format(start_time))
 
-    CIFAR_CLASSES = 10
+    if args.cifar100:
+        CIFAR_CLASSES = 100
+    else:
+        CIFAR_CLASSES = 10
 
     if not torch.cuda.is_available():
         logging.info('no gpu device available')
@@ -72,20 +75,13 @@ def main():
     logging.info('gpu device = %d' % args.gpu)
     logging.info("args = %s", args)
 
-    criterion = nn.CrossEntropyLoss()
-    criterion = criterion.cuda()
-    model = Network(args.init_channels, CIFAR_CLASSES, args.layers, criterion)
-    model = model.cuda()
-    logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
-
-    optimizer = torch.optim.SGD(
-        model.parameters(),
-        args.learning_rate,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay)
-
-    train_transform, valid_transform = utils._data_transforms_cifar10(args)
-    train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
+    # prepare dataset
+    if args.cifar100:
+        train_transform, valid_transform = utils._data_transforms_cifar100(args)
+        train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=train_transform)
+    else:
+        train_transform, valid_transform = utils._data_transforms_cifar10(args)
+        train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
 
     num_train = len(train_data)
     indices = list(range(num_train))
@@ -101,11 +97,25 @@ def main():
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
         pin_memory=True, num_workers=2)
 
+    # build network
+    criterion = nn.CrossEntropyLoss()
+    criterion = criterion.cuda()
+    model = Network(args.init_channels, CIFAR_CLASSES, args.layers, criterion)
+    model = model.cuda()
+    logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
+
+    optimizer = torch.optim.SGD(
+        model.parameters(),
+        args.learning_rate,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay)
+
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, args.epochs, eta_min=args.learning_rate_min)
 
     architect = Architect(model, args)
 
+    # execution
     for epoch in range(1, args.epochs + 1):
         lr = scheduler.get_last_lr()[0]
         logging.info('epoch %d lr %e', epoch, lr)
@@ -198,7 +208,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
 def infer(valid_queue, model, criterion):
     objs = utils.AvgrageMeter()
     top1 = utils.AvgrageMeter()
-    top5 = utils.AvgrageMeter()
+    # top5 = utils.AvgrageMeter()
     model.eval()
 
     with torch.no_grad():
@@ -213,10 +223,10 @@ def infer(valid_queue, model, criterion):
             n = input.size(0)
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
-            top5.update(prec5.item(), n)
+            # top5.update(prec5.item(), n)
 
             if step % args.report_freq == 0:
-                logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+                logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
 
     return top1.avg, objs.avg
 

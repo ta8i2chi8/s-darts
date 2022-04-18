@@ -35,7 +35,7 @@ def get_genotypes(log_path):
 
         genotypes = []
         for i in range(50):
-            genotypes.append(eval(raw_lines[4 + i * 12][35:]))
+            genotypes.append(eval(raw_lines[4 + i * 42][35:]))
 
     return genotypes
 
@@ -48,11 +48,11 @@ def create_gif(img_path, output_name):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("usage:\n python {} FOLDER_NAME_DATE".format(sys.argv[0]))
+    if len(sys.argv) != 3:
+        print("usage:\n python {} SAVED_DIR_NAME FOLDER_NAME_DATE".format(sys.argv[0]))
         sys.exit(1)
 
-    genos = get_genotypes(f'./logs/search-EXP-{sys.argv[1]}')
+    genos = get_genotypes(f'./logs/search-{sys.argv[1]}-{sys.argv[2]}')
 
     # Genotypeからpngを生成（各エポックに対して）
     for i, geno in enumerate(genos):
