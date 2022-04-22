@@ -19,7 +19,8 @@ python test_imagenet.py --auxiliary --model_path eval-EXP-20210000-000000/weight
 ```
 ## Visualization
 ```
-python visualize.py DARTS {SEED値}
+python visualize.py {MODEL_NAME} {DIRECTORY_NAME}
+  例：python visualize.py DARTS seed2
 ```
 ## Create GIF from log.txt
 ```

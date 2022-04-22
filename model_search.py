@@ -168,15 +168,12 @@ class Network(nn.Module):
             W = weights[start:end].copy()
 
             # 重みの大きさで上位２つをエッジとして選択（各ノードは２入力だから）
-            edges = sorted(range(i + 2),
-                           key=lambda x: -max(W[x][k] for k in range(len(W[x])) if k != PRIMITIVES.index('none')))[
-                    :2]
+            edges = sorted(range(i + 2), key=lambda x: -max(W[x]))[:2]
             for j in edges:
                 k_best = None
                 for k in range(len(W[j])):
-                    if k != PRIMITIVES.index('none'):
-                        if k_best is None or W[j][k] > W[j][k_best]:
-                            k_best = k
+                    if k_best is None or W[j][k] > W[j][k_best]:
+                        k_best = k
                 gene.append((PRIMITIVES[k_best], j))
             start = end
             n += 1
