@@ -124,3 +124,29 @@ DARTS_o1_s4_without_none = Genotype(
     reduce=[('max_pool_3x3', 0), ('max_pool_3x3', 1), ('skip_connect', 2), ('max_pool_3x3', 0), ('skip_connect', 2), ('skip_connect', 3), ('skip_connect', 2), ('skip_connect', 3)], 
     reduce_concat=range(2, 6)
 )
+
+# s-darts
+SDARTS_o1_s1 = Genotype(
+    normal=[('skip_connect', 0), ('sep_conv_3x3', 1), ('skip_connect', 0), ('skip_connect', 1), ('skip_connect', 0), ('skip_connect', 2), ('dil_conv_5x5', 4), ('skip_connect', 0)], 
+    normal_concat=range(2, 6), 
+    reduce=[('skip_connect', 1), ('avg_pool_3x3', 0), ('skip_connect', 2), ('avg_pool_3x3', 0), ('skip_connect', 2), ('skip_connect', 3), ('skip_connect', 4), ('skip_connect', 3)], 
+    reduce_concat=range(2, 6)
+)
+SDARTS_o1_s2 = Genotype(
+    normal=[('skip_connect', 0), ('sep_conv_3x3', 1), ('skip_connect', 2), ('skip_connect', 0), ('skip_connect', 2), ('skip_connect', 3), ('skip_connect', 2), ('dil_conv_5x5', 4)], 
+    normal_concat=range(2, 6), 
+    reduce=[('avg_pool_3x3', 0), ('avg_pool_3x3', 1), ('skip_connect', 2), ('avg_pool_3x3', 0), ('skip_connect', 3), ('avg_pool_3x3', 0), ('avg_pool_3x3', 0), ('skip_connect', 4)], 
+    reduce_concat=range(2, 6)
+)
+SDARTS_o1_s3 = Genotype(
+    normal=[('sep_conv_3x3', 0), ('sep_conv_5x5', 1), ('skip_connect', 0), ('skip_connect', 2), ('skip_connect', 0), ('skip_connect', 1), ('skip_connect', 2), ('skip_connect', 0)], 
+    normal_concat=range(2, 6), 
+    reduce=[('avg_pool_3x3', 0), ('dil_conv_3x3', 1), ('skip_connect', 2), ('avg_pool_3x3', 0), ('skip_connect', 3), ('skip_connect', 2), ('skip_connect', 2), ('skip_connect', 4)], 
+    reduce_concat=range(2, 6)
+)
+SDARTS_o1_s4 = Genotype(
+    normal=[('sep_conv_3x3', 0), ('skip_connect', 1), ('skip_connect', 1), ('skip_connect', 0), ('skip_connect', 0), ('skip_connect', 3), ('skip_connect', 2), ('skip_connect', 1)], 
+    normal_concat=range(2, 6), 
+    reduce=[('avg_pool_3x3', 0), ('skip_connect', 1), ('skip_connect', 2), ('dil_conv_3x3', 1), ('dil_conv_3x3', 2), ('dil_conv_5x5', 3), ('skip_connect', 2), ('skip_connect', 3)], 
+    reduce_concat=range(2, 6)
+)

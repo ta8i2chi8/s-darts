@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 from operations import *
 from torch.autograd import Variable
+from sparsemax import Sparsemax
 from genotypes import PRIMITIVES
 from genotypes import Genotype
 
@@ -104,6 +105,7 @@ class Network(nn.Module):
             reduction_prev = reduction
             self.cells += [cell]
             C_prev_prev, C_prev = C_prev, multiplier * C_curr
+        self.sparsemax = Sparsemax(dim=-1)
 
         self.global_pooling = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(C_prev, num_classes)
@@ -118,11 +120,11 @@ class Network(nn.Module):
 
     def forward(self, input):
         s0 = s1 = self.stem(input)
-        for i, cell in enumerate(self.cells):
+        for cell in self.cells:
             if cell.reduction:
-                weights = F.softmax(self.alphas_reduce, dim=-1)
+                weights = self.sparsemax(self.alphas_reduce)
             else:
-                weights = F.softmax(self.alphas_normal, dim=-1)
+                weights = self.sparsemax(self.alphas_normal)
             s0, s1 = s1, cell(s0, s1, weights)
         out = self.global_pooling(s1)
         logits = self.classifier(out.view(out.size(0), -1))
@@ -149,8 +151,8 @@ class Network(nn.Module):
 
     # 選択されたoperationをGenotypeとして出力
     def genotype(self):
-        gene_normal = self._parse(F.softmax(self.alphas_normal, dim=-1).data.cpu().numpy())
-        gene_reduce = self._parse(F.softmax(self.alphas_reduce, dim=-1).data.cpu().numpy())
+        gene_normal = self._parse(self.sparsemax(self.alphas_normal).data.cpu().numpy())
+        gene_reduce = self._parse(self.sparsemax(self.alphas_reduce).data.cpu().numpy())
 
         concat = range(2 + self._steps - self._multiplier, self._steps + 2)
         genotype = Genotype(

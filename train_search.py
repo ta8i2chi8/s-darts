@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
+from sparsemax import Sparsemax
 
 import utils
 from model_search import Network
@@ -121,11 +122,12 @@ def main():
         logging.info('epoch %d lr %e', epoch, lr)
 
         genotype = model.genotype()
+        sparsemax = Sparsemax(dim=-1)
         logging.info('genotype = %s', genotype)
-        logging.info(F.softmax(model.alphas_normal, dim=-1))
-        logging.info(F.softmax(model.alphas_reduce, dim=-1))
-        print(torch.sigmoid(model.alphas_normal))
-        print(torch.sigmoid(model.alphas_reduce))
+        logging.info(sparsemax(model.alphas_normal))
+        logging.info(sparsemax(model.alphas_reduce))
+        print(model.alphas_normal)
+        print(model.alphas_reduce)
 
         # training
         train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
