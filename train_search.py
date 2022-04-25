@@ -73,6 +73,7 @@ def main():
     torch.manual_seed(args.seed)
     cudnn.enabled = True
     torch.cuda.manual_seed(args.seed)
+    torch.set_printoptions(precision=4, sci_mode=False)
     logging.info('gpu device = %d' % args.gpu)
     logging.info("args = %s", args)
 
