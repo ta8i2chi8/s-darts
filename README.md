@@ -1,7 +1,12 @@
 # Edited by morimoto.
 ## Architecture search (using small proxy models)
+### 1. use sparsemax
 ```
-python train_search.py --unrolled
+python train_search.py
+```
+### 2. use sparsemax and auxiliary skip-connect
+```
+python train_search.py --auxiliary_skip
 ```
 ## Architecture evaluation (using full-sized models)
 ```
@@ -30,6 +35,7 @@ python visualize_gif.py {SAVED_DIR_NAME} {FILE_NAME_DATE}
 ```
 
 
+***
 ***
 # Differentiable Architecture Search
 Code accompanying the paper

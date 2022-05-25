@@ -1,3 +1,5 @@
+import functools
+import math
 import os
 import numpy as np
 import torch
@@ -19,6 +21,41 @@ class AvgrageMeter(object):
         self.sum += val * n
         self.cnt += n
         self.avg = self.sum / self.cnt
+
+
+def singleton(cls, *args, **kw):
+    instances = dict()
+    @functools.wraps(cls)
+    def _fun(*clsargs, **clskw):
+        if cls not in instances:
+            instances[cls] = cls(*clsargs, **clskw)
+        return instances[cls]
+    _fun.cls = cls  # make sure cls can be obtained
+    return _fun
+
+
+@singleton
+class DecayScheduler(object):
+    def __init__(self, base_lr=1.0, T_max=50, T_start=0, T_stop=50, decay_type='cosine'):
+        self.base_lr = base_lr
+        self.T_max = T_max
+        self.T_start = T_start
+        self.T_stop = T_stop        
+        self.decay_type = decay_type
+        self.decay_rate = 1.0
+
+    def step(self, epoch):
+        if epoch >= self.T_start:
+            if self.decay_type == "cosine":
+                self.decay_rate = self.base_lr * (1 + math.cos(math.pi * epoch / (self.T_max - self.T_start))) / 2.0 if epoch <= self.T_stop else self.decay_rate
+            elif self.decay_type == "slow_cosine":
+                self.decay_rate = self.base_lr * math.cos((math.pi/2) * epoch / (self.T_max - self.T_start)) if epoch <= self.T_stop else self.decay_rate
+            elif self.decay_type == "linear":
+                self.decay_rate = self.base_lr * (self.T_max - epoch) / (self.T_max - self.T_start) if epoch <= self.T_stop else self.decay_rate
+            else:
+                self.decay_rate = self.base_lr
+        else:
+            self.decay_rate = self.base_lr
 
 
 def accuracy(output, target, topk=(1,)):

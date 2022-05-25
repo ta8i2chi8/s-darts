@@ -2,15 +2,24 @@ import torch.nn.functional as F
 from operations import *
 from torch.autograd import Variable
 from sparsemax import Sparsemax
+
+from args_for_search import args, beta_decay_scheduler
 from genotypes import PRIMITIVES
 from genotypes import Genotype
 
 
 class MixedOp(nn.Module):
-
     def __init__(self, C, stride):
         super(MixedOp, self).__init__()
         self._ops = nn.ModuleList()
+        self.stride = stride
+
+        if args.auxiliary_skip:
+            if self.stride == 2:
+                self.auxiliary_op = FactorizedReduce(C, C, affine=False)
+            else:
+                self.auxiliary_op = Identity()
+
         for primitive in PRIMITIVES:
             op = OPS[primitive](C, stride, False)
             if 'pool' in primitive:
@@ -18,7 +27,11 @@ class MixedOp(nn.Module):
             self._ops.append(op)
 
     def forward(self, x, weights):
-        return sum(w * op(x) for w, op in zip(weights, self._ops))
+        res = sum(w * op(x) for w, op in zip(weights, self._ops))
+        if args.auxiliary_skip:
+            res += self.auxiliary_op(x) * beta_decay_scheduler.decay_rate
+        
+        return res
 
 
 class Cell(nn.Module):
