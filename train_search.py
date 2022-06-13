@@ -97,8 +97,9 @@ def main():
         lr = scheduler.get_last_lr()[0]
         logging.info('epoch %d lr %e', epoch, lr)
 
-        beta_decay_scheduler.step(epoch)
-        logging.info('skip beta decay rate %f', beta_decay_scheduler.decay_rate)
+        if args.auxiliary_skip:
+            beta_decay_scheduler.step(epoch)
+            logging.info('skip beta decay rate %f', beta_decay_scheduler.decay_rate)
 
         genotype = model.genotype()
         sparsemax = Sparsemax(dim=-1)
@@ -146,7 +147,6 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
     objs = utils.AvgrageMeter()  # network重み学習のloss
     # objs_arch = utils.AvgrageMeter()  # architecture重み学習のloss
     top1 = utils.AvgrageMeter()  # accuracy (top1)
-    # top5 = utils.AvgrageMeter()  # accuracy (top5)
     model.train()
 
     for step, (input, target) in enumerate(train_queue):
@@ -177,11 +177,10 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         optimizer.step()
 
         # loss, accuracy出力
-        prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+        prec1 = utils.accuracy(logits, target)[0]
         objs.update(loss.item(), n)
         # objs_arch.update(loss_arch.item(), n)
         top1.update(prec1.item(), n)
-        # top5.update(prec5.item(), n)
 
         if step % args.report_freq == 0:
             logging.info('train %03d %e %f', step, objs.avg, top1.avg)
@@ -192,7 +191,6 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
 def infer(valid_queue, model, criterion):
     objs = utils.AvgrageMeter()
     top1 = utils.AvgrageMeter()
-    # top5 = utils.AvgrageMeter()
     model.eval()
 
     with torch.no_grad():
@@ -203,11 +201,10 @@ def infer(valid_queue, model, criterion):
             logits = model(input)
             loss = criterion(logits, target)
 
-            prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+            prec1 = utils.accuracy(logits, target)[0]
             n = input.size(0)
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
-            # top5.update(prec5.item(), n)
 
             if step % args.report_freq == 0:
                 logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
