@@ -101,10 +101,6 @@ def main():
             beta_decay_scheduler.step(epoch)
             logging.info('skip beta decay rate %f', beta_decay_scheduler.decay_rate)
 
-        # change_activation_funcがTrue かつ epochが最大epoch数の2/3に到達したとき，活性化関数をsparsemaxに変更
-        if (args.change_activation_func) and (epoch == int(args.epochs * args.rate_epochs_to_change)):
-            model.activation_func = Sparsemax(dim=-1)
-
         genotype = model.genotype()
         logging.info('genotype = %s', genotype)
 
@@ -116,7 +112,7 @@ def main():
         # print(model.alphas_reduce)
 
         # training
-        train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
+        train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, epoch)
         logging.info('train_acc %f', train_acc)
         writer.add_scalar('search/accuracy/train', train_acc, epoch)
         writer.add_scalar('search/loss/train', train_obj, epoch)
@@ -134,7 +130,7 @@ def main():
         utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
+def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, epoch):
     """
         引数： {
             train_queue: trainデータのデータローダー,
@@ -144,6 +140,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
             criterion: cross entropy loss,
             optimizer: optimizer,
             lr: 学習率（スケジューラによって変化するため）,
+            epoch: 現在のエポック,
         }
     """
 
@@ -158,18 +155,23 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         input = input.cuda()
         target = target.cuda(non_blocking=True)
 
-        # 1バッチ分のデータ取得（アーキテクチャ探索に用いる用）
-        try:
-            input_search, target_search = next(valid_queue_iter)
-        except:
-            valid_queue_iter = iter(valid_queue)
-            input_search, target_search = next(valid_queue_iter)
+        # args.epochs*args.rate_epochs_to_changeエポックで，活性化関数をsoftmaxからsparsemaxに変更
+        if (args.change_activation_func) and (epoch == int(args.epochs * args.rate_epochs_to_change)):
+            model.activation_func = Sparsemax(dim=-1)
 
-        input_search = input_search.cuda()
-        target_search = target_search.cuda(non_blocking=True)
+        if epoch >= 15:
+            # 1バッチ分のデータ取得（アーキテクチャ探索に用いる用）
+            try:
+                input_search, target_search = next(valid_queue_iter)
+            except:
+                valid_queue_iter = iter(valid_queue)
+                input_search, target_search = next(valid_queue_iter)
 
-        # アーキテクチャ(α)探索　（∂Lval(ω - lr * [∂Ltrain(ω,α) / ∂ω],α) / ∂α）
-        architect.step(input, target, input_search, target_search, lr, optimizer, unrolled=args.unrolled)
+            input_search = input_search.cuda()
+            target_search = target_search.cuda(non_blocking=True)
+
+            # アーキテクチャ(α)探索　（∂Lval(ω - lr * [∂Ltrain(ω,α) / ∂ω],α) / ∂α）
+            architect.step(input, target, input_search, target_search, lr, optimizer, unrolled=args.unrolled)
 
         # 重み(ω)学習
         optimizer.zero_grad()
