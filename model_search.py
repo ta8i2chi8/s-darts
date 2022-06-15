@@ -1,7 +1,6 @@
-import torch.nn.functional as F
+import torch.nn as nn
 from operations import *
 from torch.autograd import Variable
-from sparsemax import Sparsemax
 
 from args_for_search import args, beta_decay_scheduler
 from genotypes import PRIMITIVES
@@ -29,6 +28,7 @@ class MixedOp(nn.Module):
     def forward(self, x, weights):
         res = sum(w * op(x) for w, op in zip(weights, self._ops))
         if args.auxiliary_skip:
+            # assert res.size() == self.auxiliary_op(x).size()
             res += self.auxiliary_op(x) * beta_decay_scheduler.decay_rate
         
         return res
@@ -118,7 +118,7 @@ class Network(nn.Module):
             reduction_prev = reduction
             self.cells += [cell]
             C_prev_prev, C_prev = C_prev, multiplier * C_curr
-        self.sparsemax = Sparsemax(dim=-1)
+        self.activation_func = nn.Softmax(dim=-1)
 
         self.global_pooling = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(C_prev, num_classes)
@@ -135,9 +135,9 @@ class Network(nn.Module):
         s0 = s1 = self.stem(input)
         for cell in self.cells:
             if cell.reduction:
-                weights = self.sparsemax(self.alphas_reduce)
+                weights = self.activation_func(self.alphas_reduce)
             else:
-                weights = self.sparsemax(self.alphas_normal)
+                weights = self.activation_func(self.alphas_normal)
             s0, s1 = s1, cell(s0, s1, weights)
         out = self.global_pooling(s1)
         logits = self.classifier(out.view(out.size(0), -1))
@@ -164,8 +164,8 @@ class Network(nn.Module):
 
     # 選択されたoperationをGenotypeとして出力
     def genotype(self):
-        gene_normal = self._parse(self.sparsemax(self.alphas_normal).data.cpu().numpy())
-        gene_reduce = self._parse(self.sparsemax(self.alphas_reduce).data.cpu().numpy())
+        gene_normal = self._parse(self.activation_func(self.alphas_normal).data.cpu().numpy())
+        gene_reduce = self._parse(self.activation_func(self.alphas_reduce).data.cpu().numpy())
 
         concat = range(2 + self._steps - self._multiplier, self._steps + 2)
         genotype = Genotype(

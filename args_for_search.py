@@ -34,6 +34,10 @@ parser.add_argument('--decay_start_epoch', type=int, default=0, help='epoch to s
 parser.add_argument('--decay_stop_epoch', type=int, default=50, help='epoch to stop decay')
 parser.add_argument('--decay_max_epoch', type=int, default=50, help='max epochs to decay')
 
+# for changing activation function in the middle of learning
+parser.add_argument('--change_activation_func', action='store_true', default=False, help='change activation function in the middle of learning')
+parser.add_argument('--rate_epochs_to_change', type=float, default=0.5, help='rate of epochs to change')
+
 args = parser.parse_args()
 
 beta_decay_scheduler = utils.DecayScheduler(base_lr=args.skip_beta, 

@@ -101,13 +101,16 @@ def main():
             beta_decay_scheduler.step(epoch)
             logging.info('skip beta decay rate %f', beta_decay_scheduler.decay_rate)
 
+        # change_activation_funcがTrue かつ epochが最大epoch数の2/3に到達したとき，活性化関数をsparsemaxに変更
+        if (args.change_activation_func) and (epoch == int(args.epochs * args.rate_epochs_to_change)):
+            model.activation_func = Sparsemax(dim=-1)
+
         genotype = model.genotype()
-        sparsemax = Sparsemax(dim=-1)
         logging.info('genotype = %s', genotype)
 
         # sparsemax(α)のprint 
-        logging.info(sparsemax(model.alphas_normal))
-        logging.info(sparsemax(model.alphas_reduce))
+        logging.info(model.activation_func(model.alphas_normal))
+        logging.info(model.activation_func(model.alphas_reduce))
         # 素のαのprint
         # print(model.alphas_normal)
         # print(model.alphas_reduce)
